@@ -9,6 +9,9 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
+// URL base del backend
+const API_URL = 'http://localhost:8000'
+
 interface ChatPanelProps {
   isActive: boolean
   audioFile: File | null
@@ -62,8 +65,8 @@ export default function ChatPanel({ isActive, audioFile }: ChatPanelProps) {
     }
   }, [messages])
 
-  const handleSendMessage = () => {
-    if (!inputValue.trim()) return
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || !isActive) return
 
     // Añadir mensaje del usuario
     const userMessage: Message = {
@@ -75,29 +78,43 @@ export default function ChatPanel({ isActive, audioFile }: ChatPanelProps) {
 
     setMessages((prev) => [...prev, userMessage])
     setInputValue("")
-
-    // Simular respuesta del bot
     setIsTyping(true)
 
-    setTimeout(() => {
-      const botResponses = [
-        "Según el análisis de la reunión, el Proyecto Alpha necesita recursos adicionales para cumplir con la fecha límite.",
-        "La Iniciativa Beta está experimentando retrasos debido a problemas con el proveedor actual. El equipo está considerando alternativas.",
-        "El equipo de marketing debe entregar la estrategia para el Lanzamiento Gamma antes del 15 de junio.",
-        "Carlos mencionó que hablará con Recursos Humanos para reasignar temporalmente a un desarrollador con experiencia en optimización de APIs.",
-        "La próxima reunión de seguimiento está programada para el 5 de junio, donde se revisarán los avances de los tres proyectos principales.",
-      ]
+    try {
+      const response = await fetch(`${API_URL}/query`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: userMessage.content })
+      })
 
+      if (!response.ok) {
+        throw new Error('Error al procesar la pregunta')
+      }
+
+      const data = await response.json()
+      
       const botMessage: Message = {
         id: `bot-${Date.now()}`,
-        content: botResponses[Math.floor(Math.random() * botResponses.length)],
+        content: data.respuesta,
         sender: "bot",
         timestamp: new Date(),
       }
 
       setMessages((prev) => [...prev, botMessage])
+    } catch (err) {
+      console.error('Error al enviar la pregunta:', err)
+      const errorMessage: Message = {
+        id: `error-${Date.now()}`,
+        content: "Lo siento, hubo un error al procesar tu pregunta. Por favor, intenta nuevamente.",
+        sender: "bot",
+        timestamp: new Date(),
+      }
+      setMessages((prev) => [...prev, errorMessage])
+    } finally {
       setIsTyping(false)
-    }, 1500)
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -182,13 +199,14 @@ export default function ChatPanel({ isActive, audioFile }: ChatPanelProps) {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={audioFile ? "Pregunta sobre tu audio..." : "Escribe un mensaje..."}
+            placeholder={isActive ? "Pregunta sobre tu audio..." : "Sube un audio para comenzar..."}
+            disabled={!isActive}
             className="border-gray-700 bg-gray-800 focus-visible:ring-purple-500"
           />
           <Button
             size="icon"
             onClick={handleSendMessage}
-            disabled={!inputValue.trim()}
+            disabled={!inputValue.trim() || !isActive}
             className="bg-purple-600 hover:bg-purple-700"
           >
             <Send className="h-4 w-4" />
