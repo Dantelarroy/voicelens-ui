@@ -65,7 +65,12 @@ export default function Home() {
   }
 
   return (
-    <div>
+    <div className="p-6 max-w-3xl mx-auto">
+      <h1 className="text-3xl font-bold mb-4">Voicelens</h1>
+      <p className="mb-6 text-muted-foreground">
+        Dejá de rebobinar audios. Subí, leé y preguntale a tu grabación.
+      </p>
+
       <input
         type="file"
         accept=".mp3,.wav,.m4a"
@@ -74,29 +79,43 @@ export default function Home() {
             setSelectedFile(e.target.files[0])
           }
         }}
+        className="mb-4"
       />
 
       <Button onClick={handleUpload} disabled={!selectedFile || isLoading}>
         {isLoading ? 'Analizando...' : 'Generar informe'}
       </Button>
 
-      {report && <p>{report}</p>}
+      {report && (
+        <div className="mt-6 bg-gray-100 p-4 rounded shadow">
+          <h2 className="text-xl font-semibold mb-2">🧠 Informe generado</h2>
+          <p className="whitespace-pre-line text-muted-foreground">{report}</p>
+        </div>
+      )}
 
       {sessionId && (
-        <>
-          <input
-            type="text"
-            value={question}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => setQuestion(e.target.value)}
-            placeholder="Escribí tu pregunta aquí..."
-            disabled={isChatLoading}
-          />
-          <Button onClick={handleChat} disabled={!question.trim() || isChatLoading}>
-            {isChatLoading ? 'Pensando...' : 'Enviar'}
-          </Button>
+        <div className="mt-6">
+          <h2 className="text-xl font-semibold mb-4">💬 Preguntale al audio</h2>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={question}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setQuestion(e.target.value)}
+              placeholder="Escribí tu pregunta aquí..."
+              className="flex-1 p-2 border rounded"
+              disabled={isChatLoading}
+            />
+            <Button onClick={handleChat} disabled={!question.trim() || isChatLoading}>
+              {isChatLoading ? 'Pensando...' : 'Enviar'}
+            </Button>
+          </div>
 
-          {chatResponse && <p>{chatResponse}</p>}
-        </>
+          {chatResponse && (
+            <div className="mt-4 bg-gray-100 p-4 rounded shadow">
+              <p className="whitespace-pre-line text-muted-foreground">{chatResponse}</p>
+            </div>
+          )}
+        </div>
       )}
     </div>
   )
