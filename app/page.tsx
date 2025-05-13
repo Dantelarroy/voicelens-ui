@@ -2,6 +2,8 @@
 
 import { useState, ChangeEvent } from 'react'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 
 export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -65,58 +67,97 @@ export default function Home() {
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold mb-4">Voicelens</h1>
-      <p className="mb-6 text-muted-foreground">
-        Dejá de rebobinar audios. Subí, leé y preguntale a tu grabación.
-      </p>
+    <div className="container mx-auto p-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Left Column - Upload and Report */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Voicelens</CardTitle>
+              <CardDescription>
+                Dejá de rebobinar audios. Subí, leé y preguntale a tu grabación.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <Input
+                  type="file"
+                  accept=".mp3,.wav,.m4a"
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                    if (e.target.files && e.target.files[0]) {
+                      setSelectedFile(e.target.files[0])
+                    }
+                  }}
+                />
+                <Button 
+                  className="w-full"
+                  onClick={handleUpload} 
+                  disabled={!selectedFile || isLoading}
+                >
+                  {isLoading ? 'Analizando...' : 'Generar informe'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
-      <input
-        type="file"
-        accept=".mp3,.wav,.m4a"
-        onChange={(e: ChangeEvent<HTMLInputElement>) => {
-          if (e.target.files && e.target.files[0]) {
-            setSelectedFile(e.target.files[0])
-          }
-        }}
-        className="mb-4"
-      />
-
-      <Button onClick={handleUpload} disabled={!selectedFile || isLoading}>
-        {isLoading ? 'Analizando...' : 'Generar informe'}
-      </Button>
-
-      {report && (
-        <div className="mt-6 bg-gray-100 p-4 rounded shadow">
-          <h2 className="text-xl font-semibold mb-2">🧠 Informe generado</h2>
-          <p className="whitespace-pre-line text-muted-foreground">{report}</p>
-        </div>
-      )}
-
-      {sessionId && (
-        <div className="mt-6">
-          <h2 className="text-xl font-semibold mb-4">💬 Preguntale al audio</h2>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={question}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => setQuestion(e.target.value)}
-              placeholder="Escribí tu pregunta aquí..."
-              className="flex-1 p-2 border rounded"
-              disabled={isChatLoading}
-            />
-            <Button onClick={handleChat} disabled={!question.trim() || isChatLoading}>
-              {isChatLoading ? 'Pensando...' : 'Enviar'}
-            </Button>
-          </div>
-
-          {chatResponse && (
-            <div className="mt-4 bg-gray-100 p-4 rounded shadow">
-              <p className="whitespace-pre-line text-muted-foreground">{chatResponse}</p>
-            </div>
+          {report && (
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  <span className="flex items-center gap-2">
+                    🧠 Informe generado
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="whitespace-pre-line text-muted-foreground">{report}</p>
+              </CardContent>
+            </Card>
           )}
         </div>
-      )}
+
+        {/* Right Column - Chat */}
+        {sessionId && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  <span className="flex items-center gap-2">
+                    💬 Preguntale al audio
+                  </span>
+                </CardTitle>
+                <CardDescription>
+                  Hacé preguntas sobre el contenido del audio y obtené respuestas instantáneas.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      value={question}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setQuestion(e.target.value)}
+                      placeholder="Escribí tu pregunta aquí..."
+                      disabled={isChatLoading}
+                    />
+                    <Button onClick={handleChat} disabled={!question.trim() || isChatLoading}>
+                      {isChatLoading ? 'Pensando...' : 'Enviar'}
+                    </Button>
+                  </div>
+
+                  {chatResponse && (
+                    <Card>
+                      <CardContent className="pt-6">
+                        <p className="whitespace-pre-line text-muted-foreground">{chatResponse}</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
