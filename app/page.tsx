@@ -5,11 +5,15 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 
+// URL base del backend
+const API_URL = 'http://localhost:8000'
+
 export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [report, setReport] = useState<string | null>(null)
+  const [revision, setRevision] = useState<string | null>(null)
+  const [tematica, setTematica] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [sessionId, setSessionId] = useState<string | null>(null)
   const [question, setQuestion] = useState('')
   const [chatResponse, setChatResponse] = useState<string | null>(null)
   const [isChatLoading, setIsChatLoading] = useState(false)
@@ -26,7 +30,7 @@ export default function Home() {
     formData.append('file', selectedFile)
 
     try {
-      const response = await fetch('https://a678-2a0c-5a85-9104-2d00-fc82-c7ba-5a01-a5f1.ngrok-free.app/upload', {
+      const response = await fetch(`${API_URL}/upload`, {
         method: 'POST',
         body: formData,
       })
@@ -36,8 +40,9 @@ export default function Home() {
       }
 
       const data = await response.json()
-      setReport(data.report)
-      setSessionId(data.session_id)
+      setReport(data.informe)
+      setRevision(data.revision)
+      setTematica(data.tematica)
     } catch (err) {
       console.error('Error al subir el archivo:', err)
       setError('Hubo un error al procesar el archivo. Por favor, intenta nuevamente.')
@@ -46,32 +51,20 @@ export default function Home() {
     }
   }
 
-  // Trigger upload automatically when file is selected
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      setSelectedFile(file)
-      handleUpload() // Auto-upload when file is selected
-    }
-  }
-
   const handleChat = async () => {
-    if (!sessionId || !question.trim()) return
+    if (!question.trim()) return
 
     setIsChatLoading(true)
     setChatResponse(null)
     setError(null)
 
     try {
-      const response = await fetch('https://a678-2a0c-5a85-9104-2d00-fc82-c7ba-5a01-a5f1.ngrok-free.app/chat', {
+      const response = await fetch(`${API_URL}/query`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          session_id: sessionId,
-          question: question.trim()
-        })
+        body: JSON.stringify({ query: question.trim() })
       })
 
       if (!response.ok) {
@@ -79,12 +72,37 @@ export default function Home() {
       }
 
       const data = await response.json()
-      setChatResponse(data.response)
+      setChatResponse(data.respuesta)
     } catch (err) {
       console.error('Error al enviar la pregunta:', err)
       setError('Hubo un error al procesar tu pregunta. Por favor, intenta nuevamente.')
     } finally {
       setIsChatLoading(false)
+    }
+  }
+
+  const handleRegenerateReport = async () => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch(`${API_URL}/regenerate-report`, {
+        method: 'POST',
+      })
+
+      if (!response.ok) {
+        throw new Error('Error al regenerar el informe')
+      }
+
+      const data = await response.json()
+      setReport(data.informe)
+      setRevision(data.revision)
+      setTematica(data.tematica)
+    } catch (err) {
+      console.error('Error al regenerar el informe:', err)
+      setError('Hubo un error al regenerar el informe. Por favor, intenta nuevamente.')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -105,7 +123,13 @@ export default function Home() {
                 <Input
                   type="file"
                   accept=".mp3,.wav,.m4a"
-                  onChange={handleFileChange}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      setSelectedFile(file)
+                      handleUpload()
+                    }
+                  }}
                   disabled={isLoading}
                 />
                 {selectedFile && (
@@ -135,16 +159,38 @@ export default function Home() {
                     🧠 Informe generado
                   </span>
                 </CardTitle>
+                {tematica && (
+                  <CardDescription>
+                    Temática detectada: {tematica}
+                  </CardDescription>
+                )}
               </CardHeader>
-              <CardContent>
-                <p className="whitespace-pre-line text-muted-foreground">{report}</p>
+              <CardContent className="space-y-4">
+                <div>
+                  <h3 className="font-medium mb-2">Informe técnico:</h3>
+                  <p className="whitespace-pre-line text-muted-foreground">{report}</p>
+                </div>
+                {revision && (
+                  <div>
+                    <h3 className="font-medium mb-2">Revisión del especialista:</h3>
+                    <p className="whitespace-pre-line text-muted-foreground">{revision}</p>
+                  </div>
+                )}
+                <Button 
+                  onClick={handleRegenerateReport} 
+                  disabled={isLoading}
+                  variant="outline"
+                  className="w-full"
+                >
+                  {isLoading ? 'Regenerando...' : 'Regenerar informe'}
+                </Button>
               </CardContent>
             </Card>
           )}
         </div>
 
         {/* Right Column - Chat */}
-        {sessionId && (
+        {report && (
           <div className="space-y-6">
             <Card>
               <CardHeader>
