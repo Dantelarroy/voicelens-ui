@@ -33,14 +33,22 @@ export default function VoicelensApp() {
       })
 
       if (!response.ok) {
-        throw new Error('Error al procesar el archivo')
+        const errorData = await response.json()
+        throw new Error(errorData.detail || 'Error al procesar el archivo')
       }
 
       const data = await response.json()
       setReport(data.informe)
+      
+      // Mostrar mensaje de éxito
+      console.log('Procesamiento completado:', {
+        transcripcion: data.transcripcion,
+        tematica: data.tematica,
+        revision: data.revision
+      })
     } catch (err) {
       console.error('Error al subir el archivo:', err)
-      setError('Hubo un error al procesar el archivo. Por favor, intenta nuevamente.')
+      setError(err instanceof Error ? err.message : 'Hubo un error al procesar el archivo. Por favor, intenta nuevamente.')
     } finally {
       setIsLoading(false)
     }
