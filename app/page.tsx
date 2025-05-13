@@ -27,7 +27,7 @@ export default function Home() {
         body: formData,
       })
 
-      const data: { report: string; session_id: string } = await response.json()
+      const data = await response.json()
       setReport(data.report)
       setSessionId(data.session_id)
     } catch (err) {
@@ -64,64 +64,39 @@ export default function Home() {
     }
   }
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0])
-    }
-  }
-
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold mb-4">Voicelens</h1>
-      <p className="mb-6 text-muted-foreground">
-        Dejá de rebobinar audios. Subí, leé y preguntale a tu grabación.
-      </p>
-
-      {/* Input de archivo */}
+    <div>
       <input
         type="file"
         accept=".mp3,.wav,.m4a"
-        onChange={handleFileChange}
-        className="mb-4"
+        onChange={(e: ChangeEvent<HTMLInputElement>) => {
+          if (e.target.files && e.target.files[0]) {
+            setSelectedFile(e.target.files[0])
+          }
+        }}
       />
 
-      {/* Botón para enviar */}
       <Button onClick={handleUpload} disabled={!selectedFile || isLoading}>
         {isLoading ? 'Analizando...' : 'Generar informe'}
       </Button>
 
-      {/* Mostrar informe */}
-      {report && (
-        <div className="mt-6 bg-gray-100 p-4 rounded shadow">
-          <h2 className="text-xl font-semibold mb-2">🧠 Informe generado</h2>
-          <p className="whitespace-pre-line text-muted-foreground">{report}</p>
-        </div>
-      )}
+      {report && <p>{report}</p>}
 
-      {/* Chat section */}
       {sessionId && (
-        <div className="mt-6">
-          <h2 className="text-xl font-semibold mb-4">💬 Preguntale al audio</h2>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              placeholder="Escribí tu pregunta aquí..."
-              className="flex-1 p-2 border rounded"
-              disabled={isChatLoading}
-            />
-            <Button onClick={handleChat} disabled={!question.trim() || isChatLoading}>
-              {isChatLoading ? 'Pensando...' : 'Enviar'}
-            </Button>
-          </div>
+        <>
+          <input
+            type="text"
+            value={question}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setQuestion(e.target.value)}
+            placeholder="Escribí tu pregunta aquí..."
+            disabled={isChatLoading}
+          />
+          <Button onClick={handleChat} disabled={!question.trim() || isChatLoading}>
+            {isChatLoading ? 'Pensando...' : 'Enviar'}
+          </Button>
 
-          {chatResponse && (
-            <div className="mt-4 bg-gray-100 p-4 rounded shadow">
-              <p className="whitespace-pre-line text-muted-foreground">{chatResponse}</p>
-            </div>
-          )}
-        </div>
+          {chatResponse && <p>{chatResponse}</p>}
+        </>
       )}
     </div>
   )
