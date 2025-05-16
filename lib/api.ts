@@ -1,6 +1,7 @@
 import { FileUploadResponse, ChatResponse, ReportResponse, FileType } from '@/types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// Cambiamos la configuración de la URL base para soportar ngrok
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://your-ngrok-url.ngrok.io';
 
 class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -18,42 +19,82 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 export async function uploadFile(file: File, type: FileType): Promise<FileUploadResponse> {
+  console.log('Uploading file:', { name: file.name, type, size: file.size });
+  
   const formData = new FormData();
   formData.append('file', file);
   formData.append('type', type);
 
-  const response = await fetch(`${API_BASE_URL}/upload`, {
-    method: 'POST',
-    body: formData,
-  });
+  try {
+    const response = await fetch(`${API_BASE_URL}/upload`, {
+      method: 'POST',
+      body: formData,
+    });
 
-  return handleResponse<FileUploadResponse>(response);
+    console.log('Upload response status:', response.status);
+    const data = await handleResponse<FileUploadResponse>(response);
+    console.log('Upload response data:', data);
+    return data;
+  } catch (error) {
+    console.error('Upload error:', error);
+    throw error;
+  }
 }
 
 export async function queryContent(question: string): Promise<ChatResponse> {
-  const response = await fetch(`${API_BASE_URL}/query`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ question }),
-  });
+  console.log('Querying content:', question);
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ question }),
+    });
 
-  return handleResponse<ChatResponse>(response);
+    console.log('Query response status:', response.status);
+    const data = await handleResponse<ChatResponse>(response);
+    console.log('Query response data:', data);
+    return data;
+  } catch (error) {
+    console.error('Query error:', error);
+    throw error;
+  }
 }
 
 export async function generateReport(): Promise<ReportResponse> {
-  const response = await fetch(`${API_BASE_URL}/report`, {
-    method: 'GET',
-  });
+  console.log('Generating report');
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/report`, {
+      method: 'GET',
+    });
 
-  return handleResponse<ReportResponse>(response);
+    console.log('Report response status:', response.status);
+    const data = await handleResponse<ReportResponse>(response);
+    console.log('Report response data:', data);
+    return data;
+  } catch (error) {
+    console.error('Report error:', error);
+    throw error;
+  }
 }
 
 export async function regenerateReport(): Promise<ReportResponse> {
-  const response = await fetch(`${API_BASE_URL}/regenerate-report`, {
-    method: 'POST',
-  });
+  console.log('Regenerating report');
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/regenerate-report`, {
+      method: 'POST',
+    });
 
-  return handleResponse<ReportResponse>(response);
+    console.log('Regenerate report response status:', response.status);
+    const data = await handleResponse<ReportResponse>(response);
+    console.log('Regenerate report response data:', data);
+    return data;
+  } catch (error) {
+    console.error('Regenerate report error:', error);
+    throw error;
+  }
 } 
