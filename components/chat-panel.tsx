@@ -66,7 +66,7 @@ export default function ChatPanel({ isActive, audioFile }: ChatPanelProps) {
   }, [messages])
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || !isActive) return
+    if (!inputValue.trim() || !isActive || !audioFile) return
 
     // Añadir mensaje del usuario
     const userMessage: Message = {
@@ -86,7 +86,10 @@ export default function ChatPanel({ isActive, audioFile }: ChatPanelProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ query: userMessage.content })
+        body: JSON.stringify({
+          filename: audioFile.name,
+          query: userMessage.content
+        })
       })
 
       if (!response.ok) {
@@ -97,7 +100,7 @@ export default function ChatPanel({ isActive, audioFile }: ChatPanelProps) {
       
       const botMessage: Message = {
         id: `bot-${Date.now()}`,
-        content: data.respuesta,
+        content: data.respuesta || "Lo siento, no pude procesar tu pregunta. ¿Podrías reformularla?",
         sender: "bot",
         timestamp: new Date(),
       }

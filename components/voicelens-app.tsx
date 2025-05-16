@@ -15,6 +15,7 @@ export default function VoicelensApp() {
   const [report, setReport] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isAnalysisComplete, setIsAnalysisComplete] = useState(false)
 
   const handleUpload = async () => {
     if (!selectedFile) return
@@ -22,6 +23,7 @@ export default function VoicelensApp() {
     setIsLoading(true)
     setReport(null)
     setError(null)
+    setIsAnalysisComplete(false)
 
     const formData = new FormData()
     formData.append('file', selectedFile)
@@ -38,14 +40,28 @@ export default function VoicelensApp() {
       }
 
       const data = await response.json()
-      setReport(data.informe)
       
-      // Mostrar mensaje de éxito
-      console.log('Procesamiento completado:', {
-        transcripcion: data.transcripcion,
-        tematica: data.tematica,
-        revision: data.revision
-      })
+      // Regenerar el reporte final
+      try {
+        const regenerateResponse = await fetch(`${API_URL}/regenerate-report`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ filename: selectedFile.name })
+        })
+
+        if (!regenerateResponse.ok) {
+          throw new Error('Error al regenerar el reporte')
+        }
+
+        const regeneratedData = await regenerateResponse.json()
+        setReport(regeneratedData.informe)
+        setIsAnalysisComplete(true)
+      } catch (err) {
+        console.error('Error al regenerar el reporte:', err)
+        setError('Error al generar el reporte final. Por favor, intenta nuevamente.')
+      }
     } catch (err) {
       console.error('Error al subir el archivo:', err)
       setError(err instanceof Error ? err.message : 'Hubo un error al procesar el archivo. Por favor, intenta nuevamente.')
@@ -145,7 +161,7 @@ export default function VoicelensApp() {
 
         {/* Right panel - Chat */}
         <div className="w-96 flex-shrink-0 border-l border-gray-800 bg-gray-900">
-          <ChatPanel isActive={report !== null} audioFile={selectedFile} />
+          <ChatPanel isActive={isAnalysisComplete} audioFile={selectedFile} />
         </div>
       </div>
 
