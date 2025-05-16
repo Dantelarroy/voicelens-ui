@@ -16,6 +16,7 @@ export default function VoicelensApp() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isAnalysisComplete, setIsAnalysisComplete] = useState(false)
+  const [uploadStatus, setUploadStatus] = useState<string>("")
 
   const handleUpload = async () => {
     if (!selectedFile) return
@@ -24,47 +25,55 @@ export default function VoicelensApp() {
     setReport(null)
     setError(null)
     setIsAnalysisComplete(false)
+    setUploadStatus("Iniciando proceso...")
 
     const formData = new FormData()
     formData.append('file', selectedFile)
 
     try {
-      const response = await fetch(`${API_URL}/upload`, {
+      setUploadStatus("Subiendo archivo...")
+      const uploadResponse = await fetch(`${API_URL}/upload`, {
         method: 'POST',
         body: formData,
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || 'Error al procesar el archivo')
+      const uploadData = await uploadResponse.json()
+
+      if (!uploadResponse.ok) {
+        throw new Error(uploadData.detail || 'Error al procesar el archivo')
       }
 
-      const data = await response.json()
+      setUploadStatus("Archivo subido. Generando reporte...")
       
-      // Regenerar el reporte final
-      try {
-        const regenerateResponse = await fetch(`${API_URL}/regenerate-report`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ filename: selectedFile.name })
-        })
+      // Esperar un momento antes de solicitar el reporte regenerado
+      await new Promise(resolve => setTimeout(resolve, 1000))
 
-        if (!regenerateResponse.ok) {
-          throw new Error('Error al regenerar el reporte')
-        }
+      const regenerateResponse = await fetch(`${API_URL}/regenerate-report`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ filename: selectedFile.name })
+      })
 
-        const regeneratedData = await regenerateResponse.json()
-        setReport(regeneratedData.informe)
-        setIsAnalysisComplete(true)
-      } catch (err) {
-        console.error('Error al regenerar el reporte:', err)
-        setError('Error al generar el reporte final. Por favor, intenta nuevamente.')
+      const regeneratedData = await regenerateResponse.json()
+
+      if (!regenerateResponse.ok) {
+        throw new Error(regeneratedData.detail || 'Error al regenerar el reporte')
       }
+
+      if (!regeneratedData.informe) {
+        throw new Error('El reporte generado está vacío')
+      }
+
+      setReport(regeneratedData.informe)
+      setIsAnalysisComplete(true)
+      setUploadStatus("¡Análisis completado!")
     } catch (err) {
-      console.error('Error al subir el archivo:', err)
-      setError(err instanceof Error ? err.message : 'Hubo un error al procesar el archivo. Por favor, intenta nuevamente.')
+      console.error('Error en el proceso:', err)
+      setError(err instanceof Error ? err.message : 'Hubo un error inesperado. Por favor, intenta nuevamente.')
+      setUploadStatus("Error en el proceso")
+      setIsAnalysisComplete(false)
     } finally {
       setIsLoading(false)
     }
@@ -109,7 +118,7 @@ export default function VoicelensApp() {
           {isLoading && (
             <Button disabled className="bg-purple-600">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Procesando...
+              {uploadStatus}
             </Button>
           )}
         </div>
@@ -133,10 +142,20 @@ export default function VoicelensApp() {
             onChange={(e: ChangeEvent<HTMLInputElement>) => {
               if (e.target.files && e.target.files[0]) {
                 setSelectedFile(e.target.files[0])
+                setReport(null)
+                setError(null)
+                setIsAnalysisComplete(false)
               }
             }}
             className="hidden"
           />
+
+          {/* Status section */}
+          {uploadStatus && !error && !report && (
+            <div className="mb-4 rounded-lg bg-gray-900/50 p-4">
+              <p className="text-sm text-gray-300">{uploadStatus}</p>
+            </div>
+          )}
 
           {/* Report section */}
           {report && (
@@ -154,7 +173,8 @@ export default function VoicelensApp() {
           {/* Error display */}
           {error && (
             <div className="mt-4 rounded-lg bg-red-900/20 p-4 text-red-400">
-              {error}
+              <p className="font-medium">Error:</p>
+              <p>{error}</p>
             </div>
           )}
         </div>

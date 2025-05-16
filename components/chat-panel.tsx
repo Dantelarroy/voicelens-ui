@@ -31,32 +31,46 @@ export default function ChatPanel({ isActive, audioFile }: ChatPanelProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Añadir mensaje de bienvenida cuando se carga el componente
+  // Debug log para props
   useEffect(() => {
-    if (messages.length === 0) {
-      setMessages([
-        {
-          id: "welcome",
-          content: audioFile
-            ? `He analizado tu archivo "${audioFile.name}". ¿En qué puedo ayudarte?`
-            : "¡Hola! Soy tu asistente de Voicelens. Sube un archivo de audio para comenzar el análisis, o pregúntame sobre cómo puedo ayudarte.",
-          sender: "bot",
-          timestamp: new Date(),
-        },
-      ])
-    } else if (isActive && audioFile && !messages.some((m) => m.content.includes(audioFile.name))) {
-      // Añadir mensaje cuando se completa el análisis de un nuevo archivo
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `analysis-${Date.now()}`,
-          content: `He analizado tu archivo "${audioFile.name}". ¿En qué puedo ayudarte?`,
-          sender: "bot",
-          timestamp: new Date(),
-        },
-      ])
+    console.log('ChatPanel props:', { isActive, audioFile: audioFile?.name })
+  }, [isActive, audioFile])
+
+  // Añadir mensaje de bienvenida cuando se carga el componente o cambia el estado
+  useEffect(() => {
+    console.log('Evaluando condiciones para mensaje de bienvenida:', {
+      messagesLength: messages.length,
+      isActive,
+      hasAudioFile: !!audioFile
+    })
+
+    if (isActive && messages.length === 0) {
+      const welcomeMessage: Message = {
+        id: "welcome",
+        content: audioFile
+          ? `He analizado tu archivo "${audioFile.name}". ¿En qué puedo ayudarte?`
+          : "¡Hola! Soy tu asistente de Voicelens. Sube un archivo de audio para comenzar el análisis.",
+        sender: "bot" as const,
+        timestamp: new Date(),
+      }
+      console.log('Añadiendo mensaje de bienvenida:', welcomeMessage)
+      setMessages([welcomeMessage])
     }
   }, [isActive, audioFile, messages.length])
+
+  // Añadir mensaje cuando se activa el análisis
+  useEffect(() => {
+    if (isActive && audioFile && !messages.some((m) => m.content.includes(audioFile.name))) {
+      const analysisMessage: Message = {
+        id: `analysis-${Date.now()}`,
+        content: `He analizado tu archivo "${audioFile.name}". ¿En qué puedo ayudarte?`,
+        sender: "bot" as const,
+        timestamp: new Date(),
+      }
+      console.log('Añadiendo mensaje de análisis:', analysisMessage)
+      setMessages((prev) => [...prev, analysisMessage])
+    }
+  }, [isActive, audioFile])
 
   // Scroll al último mensaje
   useEffect(() => {
@@ -81,6 +95,11 @@ export default function ChatPanel({ isActive, audioFile }: ChatPanelProps) {
     setIsTyping(true)
 
     try {
+      console.log('Enviando pregunta al backend:', {
+        filename: audioFile.name,
+        query: userMessage.content
+      })
+
       const response = await fetch(`${API_URL}/query`, {
         method: 'POST',
         headers: {
@@ -92,16 +111,17 @@ export default function ChatPanel({ isActive, audioFile }: ChatPanelProps) {
         })
       })
 
+      const data = await response.json()
+      console.log('Respuesta del backend:', data)
+
       if (!response.ok) {
-        throw new Error('Error al procesar la pregunta')
+        throw new Error(data.detail || 'Error al procesar la pregunta')
       }
 
-      const data = await response.json()
-      
       const botMessage: Message = {
         id: `bot-${Date.now()}`,
         content: data.respuesta || "Lo siento, no pude procesar tu pregunta. ¿Podrías reformularla?",
-        sender: "bot",
+        sender: "bot" as const,
         timestamp: new Date(),
       }
 
@@ -111,7 +131,7 @@ export default function ChatPanel({ isActive, audioFile }: ChatPanelProps) {
       const errorMessage: Message = {
         id: `error-${Date.now()}`,
         content: "Lo siento, hubo un error al procesar tu pregunta. Por favor, intenta nuevamente.",
-        sender: "bot",
+        sender: "bot" as const,
         timestamp: new Date(),
       }
       setMessages((prev) => [...prev, errorMessage])
@@ -127,17 +147,31 @@ export default function ChatPanel({ isActive, audioFile }: ChatPanelProps) {
     }
   }
 
+  // Debug render
+  console.log('Renderizando ChatPanel:', {
+    isActive,
+    hasAudioFile: !!audioFile,
+    messagesCount: messages.length,
+    isTyping
+  })
+
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col bg-gray-900">
       <div className="border-b border-gray-800 px-4 py-3">
         <h2 className="flex items-center gap-2 font-medium">
           <Bot className="h-5 w-5 text-purple-400" />
-          Chat Contextual
+          Chat Contextual {isActive ? '(Activo)' : '(Inactivo)'}
         </h2>
       </div>
 
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
         <div className="flex flex-col gap-4">
+          {!isActive && (
+            <div className="rounded-lg bg-gray-800/50 p-4 text-center text-sm text-gray-400">
+              El chat se activará cuando el análisis esté completo
+            </div>
+          )}
+
           {messages.map((message) => (
             <div
               key={message.id}
@@ -202,7 +236,7 @@ export default function ChatPanel({ isActive, audioFile }: ChatPanelProps) {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={isActive ? "Pregunta sobre tu audio..." : "Sube un audio para comenzar..."}
+            placeholder={isActive ? "Pregunta sobre tu audio..." : "Espera a que se complete el análisis..."}
             disabled={!isActive}
             className="border-gray-700 bg-gray-800 focus-visible:ring-purple-500"
           />
